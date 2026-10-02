@@ -1,0 +1,15 @@
+stateDiagram-v2
+    [*] --> ChoXacNhan: Độc giả gửi yêu cầu mượn
+    ChoXacNhan --> DangMuon: Nhân viên xác nhận
+    ChoXacNhan --> DaHuy: Nhân viên từ chối / Độc giả huỷ
+    DangMuon --> DaTra: Trả sách đúng hạn
+    DangMuon --> QuaHan: Quá ngày dự kiến trả
+    QuaHan --> DaTra: Trả sách (kèm phí phạt nếu có)
+    DaTra --> [*]
+    DaHuy --> [*]
+
+    ChoXacNhan: Chờ xác nhận
+    DangMuon: Đang mượn
+    DaTra: Đã trả
+    QuaHan: Quá hạn
+    DaHuy: Đã huỷ

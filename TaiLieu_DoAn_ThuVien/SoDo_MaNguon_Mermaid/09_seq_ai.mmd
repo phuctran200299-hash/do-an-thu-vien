@@ -1,0 +1,17 @@
+sequenceDiagram
+    actor U as Người dùng
+    participant C as ReactJS Client
+    participant API as Laravel API
+    participant AI as AI Service Module
+    participant DB as MySQL
+
+    U->>C: Nhập câu hỏi ngôn ngữ tự nhiên
+    C->>API: POST /api/ai/search
+    API->>AI: Phân tích nhu cầu người dùng
+    AI->>DB: Truy vấn sách phù hợp (thể loại, mô tả, đánh giá)
+    DB-->>AI: Danh sách sách liên quan
+    AI->>AI: Xếp hạng và sinh giải thích đề xuất
+    AI-->>API: Danh sách sách kèm lý do đề xuất
+    API->>DB: Ghi log đề xuất (ai_recommendation_logs)
+    API-->>C: 200 OK + kết quả đề xuất
+    C-->>U: Hiển thị danh sách sách kèm giải thích

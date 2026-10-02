@@ -1,0 +1,24 @@
+sequenceDiagram
+    actor U as Người dùng
+    participant C as ReactJS Client
+    participant API as Laravel API
+    participant S as Sanctum
+    participant DB as MySQL
+
+    U->>C: Nhập thông tin đăng ký
+    C->>API: POST /api/register
+    API->>DB: Kiểm tra email đã tồn tại
+    DB-->>API: Kết quả kiểm tra
+    API->>DB: Lưu tài khoản mới (mã hoá mật khẩu)
+    DB-->>API: Xác nhận lưu thành công
+    API-->>C: 201 Created + thông báo
+    C-->>U: Hiển thị đăng ký thành công
+
+    U->>C: Nhập email/mật khẩu đăng nhập
+    C->>API: POST /api/login
+    API->>DB: Kiểm tra thông tin đăng nhập
+    DB-->>API: Thông tin tài khoản
+    API->>S: Tạo access token
+    S-->>API: Token
+    API-->>C: 200 OK + token + thông tin user
+    C-->>U: Chuyển vào trang chính theo vai trò

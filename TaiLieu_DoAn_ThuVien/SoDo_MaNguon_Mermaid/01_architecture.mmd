@@ -1,0 +1,22 @@
+flowchart TB
+    subgraph CLIENT["TẦNG GIAO DIỆN (CLIENT)"]
+        A1["Website Độc giả<br/>ReactJS + Tailwind CSS"]
+        A2["Trang Quản trị / Nhân viên<br/>ReactJS + Tailwind CSS"]
+    end
+
+    subgraph API["TẦNG ỨNG DỤNG / API (SERVER - LARAVEL)"]
+        B2["Laravel Sanctum<br/>(Xác thực và phân quyền)"]
+        B4["Module nghiệp vụ:<br/>Sách • Mượn-Trả • Thanh toán • Thống kê"]
+        B3["AI Service Module<br/>(Tìm kiếm và đề xuất sách)"]
+    end
+
+    subgraph DATA["TẦNG DỮ LIỆU"]
+        C1[("MySQL Database")]
+    end
+
+    A1 -- "HTTPS / REST API (JSON)" --> B2
+    A2 -- "HTTPS / REST API (JSON)" --> B2
+    B2 --> B4
+    B2 --> B3
+    B4 --> C1
+    B3 --> C1

@@ -1,0 +1,120 @@
+erDiagram
+    ROLES ||--o{ USERS : "phan_loai"
+    USERS ||--o{ BORROW_RECORDS : "muon"
+    USERS ||--o{ FAVORITES : "yeu_thich"
+    USERS ||--o{ REVIEWS : "danh_gia"
+    USERS ||--o{ PAYMENTS : "thanh_toan"
+    USERS ||--o{ RESERVATIONS : "dat_truoc"
+    USERS ||--o{ AI_RECOMMENDATION_LOGS : "duoc_de_xuat"
+    BOOKS ||--o{ BOOK_AUTHORS : "co"
+    AUTHORS ||--o{ BOOK_AUTHORS : "viet"
+    CATEGORIES ||--o{ BOOKS : "phan_loai"
+    BOOKS ||--o{ BORROW_RECORDS : "duoc_muon"
+    BOOKS ||--o{ FAVORITES : "duoc_thich"
+    BOOKS ||--o{ REVIEWS : "duoc_danh_gia"
+    BOOKS ||--o{ RESERVATIONS : "duoc_dat_truoc"
+    BOOKS ||--o{ AI_RECOMMENDATION_LOGS : "de_xuat"
+    BORROW_RECORDS ||--o| PAYMENTS : "phat_sinh"
+    BORROW_RECORDS ||--o| FINES : "phat_sinh_phi"
+
+    ROLES {
+        int id PK
+        string name
+        string description
+    }
+    USERS {
+        int id PK
+        int role_id FK
+        string full_name
+        string email
+        string password
+        string phone
+        string address
+        boolean is_active
+        datetime created_at
+    }
+    AUTHORS {
+        int id PK
+        string name
+        text biography
+    }
+    CATEGORIES {
+        int id PK
+        string name
+        text description
+    }
+    BOOKS {
+        int id PK
+        int category_id FK
+        string title
+        string cover_image
+        text description
+        int quantity
+        int available_quantity
+        decimal borrow_fee
+        string status
+        boolean is_featured
+        decimal avg_rating
+        datetime created_at
+    }
+    BOOK_AUTHORS {
+        int book_id FK
+        int author_id FK
+    }
+    BORROW_RECORDS {
+        int id PK
+        int user_id FK
+        int book_id FK
+        int confirmed_by FK
+        date borrow_date
+        date due_date
+        date return_date
+        string status
+        tinyint renewed_count
+        datetime created_at
+    }
+    PAYMENTS {
+        int id PK
+        int borrow_record_id FK
+        int user_id FK
+        decimal amount
+        string payment_status
+        datetime paid_at
+    }
+    FINES {
+        int id PK
+        int borrow_record_id FK
+        decimal amount
+        string reason
+        string status
+    }
+    FAVORITES {
+        int id PK
+        int user_id FK
+        int book_id FK
+        datetime created_at
+    }
+    REVIEWS {
+        int id PK
+        int user_id FK
+        int book_id FK
+        int rating
+        text comment
+        datetime created_at
+    }
+    RESERVATIONS {
+        int id PK
+        int user_id FK
+        int book_id FK
+        string status
+        datetime created_at
+    }
+    AI_RECOMMENDATION_LOGS {
+        int id PK
+        int user_id FK
+        int book_id FK
+        string source
+        string query
+        string reason
+        datetime created_at
+    }

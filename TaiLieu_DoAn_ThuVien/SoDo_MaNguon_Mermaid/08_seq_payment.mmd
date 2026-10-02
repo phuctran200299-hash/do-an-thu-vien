@@ -1,0 +1,33 @@
+sequenceDiagram
+    actor R as Độc giả
+    participant C as ReactJS Client
+    participant API as Laravel API
+    participant DB as MySQL
+    actor NV as Nhân viên thư viện
+
+    R->>C: Chọn sách có phí, bấm "Đăng ký mượn"
+    C->>API: POST /api/borrow-requests (book_id)
+    API->>DB: Tạo borrow_record (Chờ xác nhận)
+    API->>DB: Tạo payment (status: pending, amount = borrow_fee)
+    DB-->>API: OK
+    API-->>C: 201 Created (kèm thông tin thanh toán)
+    C-->>R: Hiển thị yêu cầu thanh toán
+
+    R->>C: Xác nhận thanh toán
+    C->>API: PUT /api/borrow-requests/{id}/pay
+    API->>DB: Cập nhật payment (status: paid)
+    DB-->>API: OK
+    API-->>C: 200 OK
+    C-->>R: Thông báo thanh toán thành công
+
+    NV->>C: Xem danh sách yêu cầu chờ xác nhận
+    NV->>API: PUT /api/borrow-requests/{id}/approve
+    API->>DB: Kiểm tra payment đã "paid" chưa
+
+    alt Chưa thanh toán
+        API-->>NV: 422 - Độc giả chưa thanh toán, chưa thể xác nhận
+    else Đã thanh toán
+        API->>DB: Trừ available_quantity, cập nhật trạng thái Đang mượn
+        DB-->>API: OK
+        API-->>NV: Xác nhận thành công
+    end

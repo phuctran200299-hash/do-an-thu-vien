@@ -1,0 +1,48 @@
+flowchart LR
+    Guest(["Khách (chưa đăng ký)"])
+    Reader(["Độc giả (đã đăng nhập)"])
+
+    UC1(["Đăng ký tài khoản"])
+    UC2(["Tìm kiếm / lọc sách"])
+    UC3(["Xem chi tiết sách"])
+    UC3b(["Xem sách tương tự"])
+    UC4(["Xem sách nổi bật"])
+    UC5(["Tìm kiếm sách bằng AI"])
+    UC6(["Đăng nhập / Đăng xuất"])
+    UC7(["Quản lý tài khoản cá nhân"])
+    UC8(["Đăng ký mượn sách"])
+    UC9(["Mượn sách có phí và thanh toán"])
+    UC10(["Theo dõi sách đang mượn"])
+    UC11(["Trả sách và theo dõi trạng thái"])
+    UC12(["Xem lịch sử mượn - trả"])
+    UC13(["Quản lý sách yêu thích"])
+    UC14(["Đánh giá và nhận xét sách"])
+    UC15(["Hỏi AI tìm sách"])
+    UC35(["Gia hạn mượn sách"])
+    UC36(["Đặt trước sách"])
+
+    Guest --> UC1
+    Guest --> UC2
+    Guest --> UC3
+    Guest --> UC4
+    Guest --> UC5
+
+    Reader --> UC6
+    Reader --> UC7
+    Reader --> UC2
+    Reader --> UC3
+    Reader --> UC8
+    Reader --> UC9
+    Reader --> UC10
+    Reader --> UC11
+    Reader --> UC12
+    Reader --> UC13
+    Reader --> UC14
+    Reader --> UC15
+    Reader --> UC35
+    Reader --> UC36
+
+    UC1 -.->|"include"| UC6
+    UC8 -.->|"extend"| UC9
+    UC3 -.->|"include"| UC3b
+    UC36 -.->|"extend"| UC8

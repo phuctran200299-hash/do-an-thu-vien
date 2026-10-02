@@ -1,0 +1,20 @@
+flowchart TD
+    Start([Bắt đầu]) --> A[Độc giả tìm kiếm sách]
+    A --> B{Sách còn hàng?}
+    B -- Không --> B1[Thông báo hết sách] --> End1([Kết thúc])
+    B -- Có --> C[Độc giả gửi yêu cầu mượn]
+    C --> D{Sách có phí?}
+    D -- Có --> D1[Yêu cầu thanh toán] --> D2{Thanh toán thành công?}
+    D2 -- Không --> D3[Huỷ yêu cầu] --> End2([Kết thúc])
+    D2 -- Có --> E[Trạng thái: Chờ xác nhận]
+    D -- Không --> E
+    E --> F[Nhân viên kiểm tra và xác nhận]
+    F --> G{Chấp nhận?}
+    G -- Không --> G1[Trạng thái: Đã huỷ] --> End3([Kết thúc])
+    G -- Có --> H["Trạng thái: Đang mượn (trừ số lượng sách)"]
+    H --> I{Trả đúng hạn?}
+    I -- Có --> J[Nhân viên xác nhận trả - Trạng thái: Đã trả]
+    I -- Không --> K[Trạng thái: Quá hạn - Tính phí phạt]
+    K --> J
+    J --> L[Cộng lại số lượng sách]
+    L --> End4([Kết thúc])

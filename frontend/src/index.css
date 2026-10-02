@@ -1,0 +1,134 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-gray-50 text-gray-800 antialiased;
+  font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+}
+
+::selection {
+  @apply bg-primary-200 text-primary-900;
+}
+
+/* thanh cuộn tuỳ chỉnh */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply rounded-full bg-gray-300;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400;
+}
+
+/* ============ Buttons ============ */
+.btn {
+  @apply relative inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold
+    transition-all duration-200 ease-out disabled:opacity-50 disabled:cursor-not-allowed
+    active:scale-[0.97] whitespace-nowrap;
+}
+.btn-primary {
+  @apply btn bg-gradient-to-br from-primary-600 to-primary-700 text-white shadow-soft
+    hover:shadow-card-hover hover:-translate-y-0.5 hover:from-primary-500 hover:to-primary-600
+    focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary-200;
+}
+.btn-secondary {
+  @apply btn bg-gray-100 text-gray-800 hover:bg-gray-200 hover:-translate-y-0.5;
+}
+.btn-danger {
+  @apply btn bg-gradient-to-br from-rose-500 to-red-600 text-white shadow-soft hover:shadow-card-hover hover:-translate-y-0.5;
+}
+.btn-outline {
+  @apply btn border-2 border-gray-200 bg-white text-gray-700 hover:border-primary-300 hover:text-primary-700 hover:-translate-y-0.5;
+}
+.btn-ghost {
+  @apply btn bg-transparent text-gray-600 hover:bg-gray-100;
+}
+
+/* ============ Cards & surfaces ============ */
+.card {
+  @apply rounded-2xl border border-gray-100 bg-white shadow-soft transition-all duration-300;
+}
+.card-hover {
+  @apply card hover:-translate-y-1 hover:shadow-card-hover hover:border-primary-100;
+}
+.glass {
+  @apply border border-white/40 bg-white/70 backdrop-blur-xl;
+}
+
+/* ============ Form controls ============ */
+.input {
+  @apply w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-800 shadow-sm
+    outline-none transition-all duration-200 placeholder:text-gray-400
+    focus:border-primary-400 focus:ring-4 focus:ring-primary-100;
+}
+.label {
+  @apply mb-1.5 block text-sm font-semibold text-gray-700;
+}
+
+/* ============ Badges ============ */
+.badge {
+  @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold tracking-wide;
+}
+
+/* ============ Section heading with accent ============ */
+.section-title {
+  @apply flex items-center gap-3 text-xl font-extrabold text-gray-900;
+}
+.section-title::before {
+  content: "";
+  @apply h-6 w-1.5 rounded-full bg-gradient-to-b from-primary-500 to-accent-500;
+}
+
+/* ============ Gradient text ============ */
+.text-gradient {
+  @apply bg-gradient-to-r from-primary-600 via-primary-500 to-accent-500 bg-clip-text text-transparent;
+}
+
+/* ============ Animated blob shapes (dùng cho hero) ============ */
+.blob {
+  @apply absolute rounded-full opacity-30 blur-3xl animate-blob;
+}
+
+/* ============ Skeleton loading shimmer ============ */
+.skeleton {
+  @apply relative overflow-hidden rounded-xl bg-gray-200;
+  background-image: linear-gradient(90deg, #e5e7eb 0px, #f3f4f6 40px, #e5e7eb 80px);
+  background-size: 800px 100%;
+  animation: shimmer 1.8s infinite linear;
+}
+
+/* ============ Fancy focus ring for nav pills ============ */
+.nav-pill {
+  @apply relative rounded-lg px-3 py-2 text-sm font-semibold text-gray-600 transition-colors duration-200 hover:text-primary-700;
+}
+.nav-pill.active {
+  @apply text-primary-700;
+}
+.nav-pill.active::after {
+  content: "";
+  @apply absolute -bottom-[15px] left-2 right-2 h-[3px] rounded-full bg-gradient-to-r from-primary-500 to-accent-500;
+}
+
+/* ============ Reveal-on-load utility ============ */
+.reveal {
+  animation: fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

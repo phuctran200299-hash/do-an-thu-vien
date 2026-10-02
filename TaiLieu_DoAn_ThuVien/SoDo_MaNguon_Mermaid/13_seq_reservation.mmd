@@ -1,0 +1,29 @@
+sequenceDiagram
+    actor R1 as Độc giả A (đặt trước)
+    participant C as ReactJS Client
+    participant API as Laravel API
+    participant DB as MySQL
+    actor NV as Nhân viên thư viện
+    actor R2 as Độc giả B (đang mượn)
+
+    R1->>C: Xem sách đã hết, bấm "Đặt trước"
+    C->>API: POST /api/reservations (book_id)
+    API->>DB: Kiểm tra available_quantity = 0
+    API->>DB: Tạo reservation (status: Đang chờ)
+    DB-->>API: OK
+    API-->>C: 201 Created - kèm vị trí xếp hàng
+    C-->>R1: Thông báo đặt trước thành công
+
+    Note over R2,NV: Một thời gian sau...
+    R2->>NV: Mang sách đến trả
+    NV->>API: PUT /api/borrow-requests/{id}/return
+    API->>DB: Cộng lại available_quantity
+    API->>DB: Tìm reservation "Đang chờ" sớm nhất của sách này
+    API->>DB: Cập nhật reservation -> trạng thái "Sẵn sàng"
+    DB-->>API: OK
+    API-->>NV: Xác nhận trả sách thành công
+
+    R1->>C: Kiểm tra trang "Đặt trước của tôi"
+    C->>API: GET /api/my-reservations
+    API-->>C: Trạng thái: Sẵn sàng
+    C-->>R1: Mời đến thư viện đăng ký mượn ngay

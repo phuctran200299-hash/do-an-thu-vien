@@ -1,0 +1,23 @@
+sequenceDiagram
+    actor NV as Nhân viên thư viện
+    participant API as Laravel API
+    participant DB as MySQL
+
+    NV->>API: PUT /api/borrow-requests/{id}/return
+    API->>DB: Đồng bộ trạng thái quá hạn (due_date < hôm nay)
+    API->>DB: Cộng lại available_quantity của sách
+
+    alt Trạng thái trước đó là "Quá hạn"
+        API->>API: Tính số ngày quá hạn = hôm nay - due_date
+        API->>DB: Tạo bản ghi fines (amount = số ngày x đơn giá phạt/ngày)
+        API->>DB: Cập nhật borrow_record: status = Đã trả, return_date = hôm nay
+        DB-->>API: OK
+        API-->>NV: Trả sách thành công - phát sinh phí phạt
+    else Trả đúng hạn
+        API->>DB: Cập nhật borrow_record: status = Đã trả, return_date = hôm nay
+        DB-->>API: OK
+        API-->>NV: Trả sách thành công
+    end
+
+    API->>DB: Kiểm tra hàng chờ đặt trước của sách này
+    API->>DB: Nếu có, chuyển lượt đặt trước sớm nhất sang "Sẵn sàng"

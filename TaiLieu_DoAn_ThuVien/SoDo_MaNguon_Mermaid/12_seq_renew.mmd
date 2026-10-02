@@ -1,0 +1,21 @@
+sequenceDiagram
+    actor R as Độc giả
+    participant C as ReactJS Client
+    participant API as Laravel API
+    participant DB as MySQL
+
+    R->>C: Chọn sách đang mượn, bấm "Gia hạn"
+    C->>API: PUT /api/borrow-requests/{id}/renew
+    API->>DB: Kiểm tra trạng thái = Đang mượn
+    API->>DB: Kiểm tra số lần đã gia hạn < giới hạn cho phép (1 lần)
+    API->>DB: Kiểm tra có độc giả khác đang đặt trước sách này không
+
+    alt Đủ điều kiện gia hạn
+        API->>DB: Cộng thêm 7 ngày vào due_date, tăng renewed_count
+        DB-->>API: OK
+        API-->>C: 200 OK - Gia hạn thành công
+        C-->>R: Hiển thị hạn trả mới
+    else Không đủ điều kiện
+        API-->>C: 422 - Từ chối kèm lý do (đã hết lượt / có người đặt trước / đã quá hạn)
+        C-->>R: Hiển thị thông báo lỗi
+    end

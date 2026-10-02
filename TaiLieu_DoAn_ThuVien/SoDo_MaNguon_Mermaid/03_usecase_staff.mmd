@@ -1,0 +1,25 @@
+flowchart LR
+    Staff(["Nhân viên thư viện"])
+    UC16(["Đăng nhập / Đăng xuất"])
+    UC17(["Quản lý yêu cầu mượn sách"])
+    UC18(["Quản lý trả sách"])
+    UC19(["Quản lý sách quá hạn"])
+    UC20(["Cập nhật tình trạng sách"])
+    UC21(["Quản lý giao dịch mượn có phí"])
+    UC22(["Tra cứu và hỗ trợ độc giả"])
+    UC37(["Quản lý phí phạt quá hạn"])
+    UC38(["Quản lý hàng chờ đặt trước"])
+
+    Staff --> UC16
+    Staff --> UC17
+    Staff --> UC18
+    Staff --> UC19
+    Staff --> UC20
+    Staff --> UC21
+    Staff --> UC22
+    Staff --> UC37
+    Staff --> UC38
+
+    UC17 -.->|"extend"| UC21
+    UC18 -.->|"extend"| UC37
+    UC18 -.->|"extend"| UC38

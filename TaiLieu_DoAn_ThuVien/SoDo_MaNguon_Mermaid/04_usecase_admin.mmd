@@ -1,0 +1,29 @@
+flowchart LR
+    Admin(["Quản trị viên (Admin)"])
+    UC23(["Đăng nhập / Đăng xuất"])
+    UC24(["Quản lý tài khoản và phân quyền"])
+    UC25(["Quản lý sách"])
+    UC26(["Quản lý tác giả"])
+    UC27(["Quản lý thể loại sách"])
+    UC28(["Quản lý mượn - trả toàn hệ thống"])
+    UC29(["Quản lý sách quá hạn"])
+    UC30(["Quản lý giao dịch và thanh toán"])
+    UC31(["Quản lý đánh giá"])
+    UC32(["Ghim sách nổi bật"])
+    UC33(["Theo dõi hoạt động chức năng AI"])
+    UC34(["Thống kê và báo cáo"])
+
+    Admin --> UC23
+    Admin --> UC24
+    Admin --> UC25
+    Admin --> UC26
+    Admin --> UC27
+    Admin --> UC28
+    Admin --> UC29
+    Admin --> UC30
+    Admin --> UC31
+    Admin --> UC32
+    Admin --> UC33
+    Admin --> UC34
+
+    UC25 -.->|"extend"| UC32

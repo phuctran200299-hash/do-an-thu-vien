@@ -1,0 +1,31 @@
+sequenceDiagram
+    actor R as Độc giả
+    participant C as ReactJS Client
+    participant API as Laravel API
+    participant DB as MySQL
+    actor NV as Nhân viên thư viện
+
+    R->>C: Chọn sách và bấm "Đăng ký mượn"
+    C->>API: POST /api/borrow-requests
+    API->>DB: Kiểm tra số lượng sách còn lại
+    DB-->>API: Tình trạng sách
+
+    alt Còn sách
+        API->>DB: Tạo bản ghi mượn (trạng thái Chờ xác nhận)
+        DB-->>API: OK
+        API-->>C: 201 Created
+        C-->>R: Thông báo yêu cầu đã gửi
+        NV->>C: Xem danh sách yêu cầu chờ xác nhận
+        NV->>API: PUT /api/borrow-requests/{id}/approve
+        API->>DB: Cập nhật trạng thái Đang mượn, trừ số lượng sách
+        DB-->>API: OK
+        API-->>NV: Xác nhận thành công
+        R->>NV: Trả sách tại thư viện
+        NV->>API: PUT /api/borrow-requests/{id}/return
+        API->>DB: Cập nhật trạng thái Đã trả, cộng lại số lượng sách
+        DB-->>API: OK
+        API-->>NV: Xác nhận trả sách thành công
+    else Hết sách
+        API-->>C: 400 Bad Request (Hết sách)
+        C-->>R: Thông báo hết sách
+    end
