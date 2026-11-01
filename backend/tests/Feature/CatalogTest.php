@@ -60,6 +60,19 @@ class CatalogTest extends ApiTestCase
         $this->assertSame(['Sức mạnh của thói quen'], $titles->all());
     }
 
+    public function test_ai_search_treats_vietnamese_compound_words_as_one_unit(): void
+    {
+        $this->makeBook(['title' => 'Python Crash Course', 'description' => 'Nhập môn lập trình Python']);
+        $this->makeBook(['title' => 'Hành trình về phương Đông', 'description' => 'Hành trình của nhà khoa học']);
+        $this->makeBook(['title' => 'Tâm lý học thành công', 'description' => 'Tâm lý học']);
+
+        foreach (['tôi muốn học lập trình', 'lap trinh', 'học python'] as $query) {
+            $titles = collect($this->postJson('/api/ai/search', ['query' => $query])->assertOk()->json('results'))
+                ->pluck('book.title');
+            $this->assertSame(['Python Crash Course'], $titles->all(), $query);
+        }
+    }
+
     public function test_cover_image_is_served_as_absolute_url_and_stored_relative(): void
     {
         $book = $this->makeBook(['cover_image' => 'covers/mat-biec.jpg']);

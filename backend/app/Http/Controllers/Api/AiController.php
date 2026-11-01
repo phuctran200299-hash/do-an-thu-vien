@@ -41,11 +41,16 @@ class AiController extends Controller
 
         $books = Book::with(['category', 'authors'])->get();
 
-        $scored = $books->map(function (Book $book) use ($keywords) {
-            [$score, $matchedOn] = $this->scoreBookAgainstKeywords($book, $keywords);
+        $docs = $books->map(fn (Book $b) => ' '.implode(' ', $this->plainTokens(implode(' ', [
+            $b->title, $b->category?->name, $b->authors->pluck('name')->implode(' '), $b->description,
+        ]))).' ');
+        $pairs = $this->compoundPairs($keywords, $docs);
+        $idf = $this->keywordIdf($keywords, $docs);
+        $scored = $books->map(function (Book $book) use ($keywords, $pairs, $idf) {
+            [$score, $matchedOn] = $this->scoreBookAgainstKeywords($book, $keywords, $pairs, $idf);
 
             return ['book' => $book, 'score' => $score, 'matched_on' => $matchedOn];
-        })->filter(fn ($item) => ! empty($item['matched_on']))
+        })->filter(fn ($item) => $item['score'] > 0 && ! empty($item['matched_on']))
             ->sortByDesc('score')
             ->values();
 
@@ -212,10 +217,10 @@ class AiController extends Controller
 
         $raw = preg_split('/[^\p{L}\p{N}]+/u', mb_strtolower($query), -1, PREG_SPLIT_NO_EMPTY);
         $keywords = [];
-        foreach ($raw as $word) {
+        foreach ($raw as $pos => $word) {
             $plain = $this->stripAccents($word);
             if (! in_array($plain, $stopWords, true)) {
-                $keywords[] = ['raw' => $word, 'plain' => $plain];
+                $keywords[] = ['raw' => $word, 'plain' => $plain, 'pos' => $pos];
             }
         }
 
@@ -226,12 +231,22 @@ class AiController extends Controller
      * Tính điểm phù hợp của một cuốn sách. So khớp theo từ nguyên vẹn (không theo chuỗi con) để
      * "quen" không khớp nhầm "Eloquent"; khớp đúng cả dấu được trọn điểm, chỉ khớp khi bỏ dấu
      * (vd "thói" với "thời") được 40% điểm; khớp nguyên cụm hai từ liên tiếp được cộng thêm.
+     *
+     * Với các từ ghép do compoundPairs() xác định (vd "lập trình"), nếu văn bản chỉ chứa lẻ một
+     * tiếng của từ ghép (vd "trình" trong "hành trình") thì chỉ được 25% điểm và không tính vào
+     * độ phủ từ khoá.
      */
-    private function scoreBookAgainstKeywords(Book $book, array $keywords): array
+    private function scoreBookAgainstKeywords(Book $book, array $keywords, array $pairs = [], array $idf = []): array
     {
+        $idf = $idf ?: array_fill(0, count($keywords), 1.0);
         $score = 0;
         $matchedOn = [];
         $matchedKeywords = [];
+
+        $bound = [];
+        foreach ($pairs as $i) {
+            $bound[$i] = $bound[$i + 1] = true;
+        }
 
         $fields = [
             'title' => [$book->title, 3],
@@ -244,33 +259,52 @@ class AiController extends Controller
             $rawTokens = preg_split('/[^\p{L}\p{N}]+/u', mb_strtolower($text), -1, PREG_SPLIT_NO_EMPTY);
             $plainTokens = array_map(fn ($t) => $this->stripAccents($t), $rawTokens);
 
+            $rawText = ' '.implode(' ', $rawTokens).' ';
+            $plainText = ' '.implode(' ', $plainTokens).' ';
+
+            // từ ghép xuất hiện nguyên cụm trong trường này
             $fieldScore = 0;
-            foreach ($keywords as $k => $kw) {
-                if (in_array($kw['raw'], $rawTokens, true)) {
-                    $fieldScore += $weight;
-                    $matchedKeywords[$k] = true;
-                } elseif (in_array($kw['plain'], $plainTokens, true)) {
-                    $fieldScore += $weight * 0.4;
-                    $matchedKeywords[$k] = true;
+            $inCompound = [];
+            foreach ($pairs as $i) {
+                $a = $keywords[$i];
+                $b = $keywords[$i + 1];
+                $pairIdf = ($idf[$i] + $idf[$i + 1]) / 2;
+                if (str_contains($rawText, " {$a['raw']} {$b['raw']} ")) {
+                    $fieldScore += 2 * $weight * $pairIdf;
+                } elseif (str_contains($plainText, " {$a['plain']} {$b['plain']} ")) {
+                    $fieldScore += 2 * $weight * 0.4 * $pairIdf;
+                } else {
+                    continue;
                 }
-            }
-            if ($fieldScore === 0) {
-                continue;
+                $inCompound[$i] = $inCompound[$i + 1] = true;
             }
 
-            $plainText = ' '.implode(' ', $plainTokens).' ';
-            for ($i = 0; $i < count($keywords) - 1; $i++) {
-                if (str_contains($plainText, ' '.$keywords[$i]['plain'].' '.$keywords[$i + 1]['plain'].' ')) {
-                    $fieldScore += 2 * $weight;
+            foreach ($keywords as $k => $kw) {
+                if (in_array($kw['raw'], $rawTokens, true)) {
+                    $points = $weight * $idf[$k];
+                } elseif (in_array($kw['plain'], $plainTokens, true)) {
+                    $points = $weight * 0.4 * $idf[$k];
+                } else {
+                    continue;
                 }
+                if (! empty($bound[$k]) && empty($inCompound[$k])) {
+                    $fieldScore += $points * 0.25;
+                    continue;
+                }
+                $fieldScore += $points;
+                $matchedKeywords[$k] = true;
+            }
+            if ($fieldScore == 0) {
+                continue;
             }
 
             $score += $fieldScore;
             $matchedOn[$field] = true;
         }
 
-        // nhân theo độ phủ: sách khớp càng nhiều từ khoá khác nhau càng được ưu tiên
-        $score *= count($matchedKeywords) / count($keywords);
+        // nhân theo độ phủ (tính theo trọng số IDF): sách khớp càng nhiều từ khoá quan trọng càng được ưu tiên
+        $covered = array_sum(array_intersect_key($idf, $matchedKeywords));
+        $score *= $covered / array_sum($idf);
 
         // ưu tiên nhẹ sách được đánh giá cao khi điểm khớp từ khoá bằng nhau (chỉ áp dụng khi đã khớp)
         if ($score > 0) {
@@ -278,6 +312,54 @@ class AiController extends Controller
         }
 
         return [$score, $matchedOn];
+    }
+
+    /**
+     * Xác định các từ ghép trong câu hỏi: hai từ khoá đứng liền nhau được coi là một từ ghép
+     * nếu cụm hai tiếng đó (đã bỏ dấu) thực sự xuất hiện trong dữ liệu sách. Nhờ vậy "lập trình"
+     * là từ ghép, còn "học python" thì không.
+     *
+     * @return int[] vị trí từ khoá đầu tiên của mỗi từ ghép
+     */
+    private function compoundPairs(array $keywords, $docs): array
+    {
+        $corpus = $docs->implode('|');
+        $pairs = [];
+        for ($i = 0; $i < count($keywords) - 1; $i++) {
+            $a = $keywords[$i];
+            $b = $keywords[$i + 1];
+            if ($b['pos'] === $a['pos'] + 1 && str_contains($corpus, " {$a['plain']} {$b['plain']} ")) {
+                $pairs[] = $i;
+            }
+        }
+
+        return $pairs;
+    }
+
+    /**
+     * Trọng số IDF (Inverse Document Frequency) của từng từ khoá: từ xuất hiện trong càng ít
+     * sách thì càng mang nhiều thông tin (vd "python" quan trọng hơn "học").
+     *
+     * @return float[] trọng số theo vị trí từ khoá
+     */
+    private function keywordIdf(array $keywords, $docs): array
+    {
+        $total = max(1, $docs->count());
+
+        return array_map(function ($kw) use ($docs, $total) {
+            $df = $docs->filter(fn ($doc) => str_contains($doc, " {$kw['plain']} "))->count();
+
+            return log(1 + $total / max(1, $df));
+        }, $keywords);
+    }
+
+    /** Tách văn bản thành các từ viết thường, không dấu. */
+    private function plainTokens(string $text): array
+    {
+        return array_map(
+            fn ($t) => $this->stripAccents($t),
+            preg_split('/[^\p{L}\p{N}]+/u', mb_strtolower($text), -1, PREG_SPLIT_NO_EMPTY)
+        );
     }
 
     private function buildReason(array $matchedOn, Book $book): string
