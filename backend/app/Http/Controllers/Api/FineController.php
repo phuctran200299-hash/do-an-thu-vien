@@ -27,6 +27,10 @@ class FineController extends Controller
      */
     public function markPaid(Fine $fine)
     {
+        if ($fine->status === Fine::STATUS_PAID) {
+            return response()->json(['message' => 'Khoản phí phạt này đã được thanh toán trước đó.'], 422);
+        }
+
         $fine->update(['status' => Fine::STATUS_PAID]);
 
         return response()->json(['message' => 'Đã ghi nhận thanh toán phí phạt.', 'fine' => $fine->fresh()]);

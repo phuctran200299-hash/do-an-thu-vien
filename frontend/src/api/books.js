@@ -12,3 +12,4 @@ export const updateBookStatusApi = (id, status) => apiClient.put(`/books/${id}/s
 export const getReviewsApi = (bookId) => apiClient.get(`/books/${bookId}/reviews`);
 export const createReviewApi = (bookId, data) => apiClient.post(`/books/${bookId}/reviews`, data);
 export const deleteReviewApi = (bookId) => apiClient.delete(`/books/${bookId}/reviews`);
+export const getHomeOverviewApi = () => apiClient.get("/home/overview");

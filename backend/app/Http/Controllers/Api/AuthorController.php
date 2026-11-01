@@ -12,13 +12,15 @@ class AuthorController extends Controller
     /** UC02 - danh sách tác giả (công khai, dùng cho bộ lọc). */
     public function index(Request $request)
     {
-        $query = Author::query();
+        $query = Author::query()->withCount('books');
 
         if ($request->filled('q')) {
             $query->where('name', 'like', '%'.$request->string('q').'%');
         }
 
-        return response()->json($query->orderBy('name')->paginate(20));
+        $perPage = min(max((int) $request->input('per_page', 20), 1), 200);
+
+        return response()->json($query->orderBy('name')->paginate($perPage));
     }
 
     public function show(Author $author)

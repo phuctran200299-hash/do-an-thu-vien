@@ -24,6 +24,9 @@ export default function BookList() {
   const categoryId = searchParams.get("category_id") || "";
   const status = searchParams.get("status") || "";
   const page = searchParams.get("page") || "1";
+  const sort = searchParams.get("sort") || "";
+  const authorId = searchParams.get("author_id") || "";
+  const authorName = searchParams.get("author") || "";
 
   useEffect(() => {
     getCategoriesApi().then((res) => setCategories(res.data.categories));
@@ -31,15 +34,17 @@ export default function BookList() {
 
   useEffect(() => {
     setLoading(true);
-    getBooksApi({ q, category_id: categoryId, status, page })
+    const [sortField, direction] = sort ? sort.split(":") : [];
+    getBooksApi({ q, category_id: categoryId, author_id: authorId || undefined, status, page, sort: sortField, direction })
       .then((res) => setBooks(res.data))
       .finally(() => setLoading(false));
-  }, [q, categoryId, status, page]);
+  }, [q, categoryId, authorId, status, page, sort]);
 
   const updateParam = (key, value) => {
     const next = new URLSearchParams(searchParams);
     if (value) next.set(key, value);
     else next.delete(key);
+    if (key === "author_id") next.delete("author");
     next.set("page", "1");
     setSearchParams(next);
   };
@@ -54,6 +59,7 @@ export default function BookList() {
   const activeFilters = [
     q && { key: "q", label: `"${q}"` },
     categoryId && { key: "category_id", label: categories.find((c) => String(c.id) === categoryId)?.name },
+    authorId && { key: "author_id", label: `Tác giả: ${authorName || "#" + authorId}` },
     status && { key: "status", label: status === "available" ? "Còn sách" : "Ngừng cung cấp" },
   ].filter(Boolean);
 
@@ -62,7 +68,7 @@ export default function BookList() {
       <h1 className="section-title mb-1">Tìm kiếm sách</h1>
       <p className="mb-5 text-sm text-gray-500">Khám phá kho sách với bộ lọc theo tên, thể loại và tình trạng.</p>
 
-      <div className="card mb-6 grid grid-cols-1 gap-3 p-4 sm:grid-cols-4">
+      <div className="card mb-6 grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-5">
         <div className="relative sm:col-span-2">
           <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
           <input
@@ -85,6 +91,13 @@ export default function BookList() {
           <option value="">Tất cả trạng thái</option>
           <option value="available">Còn sách</option>
           <option value="unavailable">Ngừng cung cấp</option>
+        </select>
+        <select className="input" value={sort} onChange={(e) => updateParam("sort", e.target.value)}>
+          <option value="">Mới nhất</option>
+          <option value="avg_rating:desc">Đánh giá cao nhất</option>
+          <option value="title:asc">Tên A → Z</option>
+          <option value="title:desc">Tên Z → A</option>
+          <option value="borrow_fee:asc">Phí mượn thấp → cao</option>
         </select>
       </div>
 
@@ -122,7 +135,7 @@ export default function BookList() {
           ) : (
             <AnimatePresence mode="wait">
               <motion.div
-                key={`${q}-${categoryId}-${status}-${page}`}
+                key={`${q}-${categoryId}-${status}-${page}-${sort}`}
                 className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
                 variants={container}
                 initial="hidden"

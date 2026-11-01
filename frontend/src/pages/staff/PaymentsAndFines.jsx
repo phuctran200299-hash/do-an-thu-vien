@@ -1,135 +1,141 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { BadgeCheck, CreditCard } from "lucide-react";
 import { getFinesApi, getPaymentsApi, markFinePaidApi } from "../../api/payments";
+import { Alert, BookCell, DataTable, PageHeader, Pagination, Pill, Tabs, UserCell } from "../../components/admin/ui";
+import { fmtDateTime, money } from "../../components/admin/format";
+
+const PAYMENT = {
+  paid: { label: "Đã thanh toán", tone: "green" },
+  pending: { label: "Chờ thanh toán", tone: "yellow" },
+  failed: { label: "Đã huỷ", tone: "gray" },
+};
+
+const VIEWS = [
+  { value: "payments", label: "Thanh toán phí mượn" },
+  { value: "fines-unpaid", label: "Phí phạt chưa thu", tone: "bg-rose-100 text-rose-700" },
+  { value: "fines-paid", label: "Phí phạt đã thu" },
+];
 
 export default function PaymentsAndFines() {
-  const [tab, setTab] = useState("payments");
-  const [payments, setPayments] = useState(null);
-  const [fines, setFines] = useState(null);
+  const [view, setView] = useState("payments");
+  const [page, setPage] = useState(1);
+  const [data, setData] = useState(null);
+  const [counts, setCounts] = useState({});
+  const [alert, setAlert] = useState(null);
 
-  const loadPayments = () => getPaymentsApi().then((res) => setPayments(res.data));
-  const loadFines = () => getFinesApi().then((res) => setFines(res.data));
+  const loadCounts = useCallback(() => {
+    Promise.all([getPaymentsApi(), getFinesApi({ status: "unpaid" }), getFinesApi({ status: "paid" })]).then(([p, u, f]) =>
+      setCounts({ payments: p.data.total, "fines-unpaid": u.data.total, "fines-paid": f.data.total })
+    );
+  }, []);
 
-  useEffect(() => {
-    if (tab === "payments") loadPayments();
-    else loadFines();
-  }, [tab]);
+  const load = useCallback(() => {
+    setData(null);
+    const req = view === "payments" ? getPaymentsApi({ page }) : getFinesApi({ status: view === "fines-paid" ? "paid" : "unpaid", page });
+    req.then((res) => setData(res.data));
+  }, [view, page]);
+
+  useEffect(loadCounts, [loadCounts]);
+  useEffect(load, [load]);
 
   const handleMarkPaid = async (id) => {
     try {
-      await markFinePaidApi(id);
-      loadFines();
+      const res = await markFinePaidApi(id);
+      setAlert({ tone: "success", message: res.data.message });
+      load();
+      loadCounts();
     } catch (e) {
-      alert(e.response?.data?.message || "Không thể xác nhận thu phí phạt.");
+      setAlert({ tone: "error", message: e.response?.data?.message || "Không thể xác nhận thu phí phạt." });
     }
   };
 
-  const paymentStatusBadge = (status) => {
-    const map = {
-      paid: "bg-green-100 text-green-700",
-      pending: "bg-yellow-100 text-yellow-800",
-      failed: "bg-red-100 text-red-700",
-    };
-    const labels = { paid: "Đã thanh toán", pending: "Chờ thanh toán", failed: "Thất bại/Đã huỷ" };
-    return <span className={`badge ${map[status]}`}>{labels[status] || status}</span>;
-  };
+  const rows = data?.data || [];
 
   return (
     <div>
-      <h1 className="mb-4 text-xl font-bold text-gray-900">Giao dịch mượn có phí &amp; Phí phạt</h1>
+      <PageHeader icon={CreditCard} title="Giao dịch & phí phạt" subtitle="Theo dõi các khoản thanh toán mượn sách có phí và thu phí phạt trả sách trễ hạn tại quầy." />
 
-      <div className="mb-4 flex gap-2">
-        <button
-          onClick={() => setTab("payments")}
-          className={`rounded-full px-3 py-1.5 text-sm ${tab === "payments" ? "bg-primary-600 text-white" : "bg-white border text-gray-600"}`}
+      <Tabs
+        tabs={VIEWS.map((v) => ({ ...v, count: counts[v.value] }))}
+        value={view}
+        onChange={(v) => {
+          setView(v);
+          setPage(1);
+        }}
+      />
+
+      <Alert message={alert?.message} tone={alert?.tone} onClose={() => setAlert(null)} />
+
+      {view === "payments" ? (
+        <DataTable
+          loading={!data}
+          colSpan={5}
+          head={
+            <>
+              <th>Độc giả</th>
+              <th>Sách</th>
+              <th>Số tiền</th>
+              <th>Trạng thái</th>
+              <th>Thời gian thanh toán</th>
+            </>
+          }
+          footer={<Pagination meta={data} onChange={setPage} />}
         >
-          Thanh toán mượn sách có phí
-        </button>
-        <button
-          onClick={() => setTab("fines")}
-          className={`rounded-full px-3 py-1.5 text-sm ${tab === "fines" ? "bg-primary-600 text-white" : "bg-white border text-gray-600"}`}
+          {rows.map((p) => (
+            <tr key={p.id}>
+              <td>
+                <UserCell user={p.user} />
+              </td>
+              <td className="min-w-[220px]">
+                <BookCell book={p.borrow_record?.book} />
+              </td>
+              <td className="whitespace-nowrap font-bold text-gray-900">{money(p.amount)}</td>
+              <td>
+                <Pill tone={PAYMENT[p.payment_status]?.tone}>{PAYMENT[p.payment_status]?.label || p.payment_status}</Pill>
+              </td>
+              <td className="whitespace-nowrap">{fmtDateTime(p.paid_at)}</td>
+            </tr>
+          ))}
+        </DataTable>
+      ) : (
+        <DataTable
+          loading={!data}
+          colSpan={5}
+          head={
+            <>
+              <th>Độc giả</th>
+              <th>Sách</th>
+              <th>Lý do</th>
+              <th>Số tiền</th>
+              <th className="!text-right">{view === "fines-unpaid" ? "Thao tác" : "Trạng thái"}</th>
+            </>
+          }
+          footer={<Pagination meta={data} onChange={setPage} />}
         >
-          Phí phạt quá hạn
-        </button>
-      </div>
-
-      {tab === "payments" && (
-        <div className="overflow-x-auto card">
-          <table className="min-w-full divide-y divide-gray-200 text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left font-medium text-gray-500">Độc giả</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-500">Sách</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-500">Số tiền</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-500">Trạng thái</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-500">Thời gian</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {payments?.data.map((p) => (
-                <tr key={p.id}>
-                  <td className="px-4 py-3">{p.user?.name}</td>
-                  <td className="px-4 py-3">{p.borrow_record?.book?.title}</td>
-                  <td className="px-4 py-3">{Number(p.amount).toLocaleString("vi-VN")}đ</td>
-                  <td className="px-4 py-3">{paymentStatusBadge(p.payment_status)}</td>
-                  <td className="px-4 py-3">{p.paid_at ? p.paid_at.slice(0, 16).replace("T", " ") : "-"}</td>
-                </tr>
-              ))}
-              {payments && payments.data.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
-                    Chưa có giao dịch nào.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {tab === "fines" && (
-        <div className="overflow-x-auto card">
-          <table className="min-w-full divide-y divide-gray-200 text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left font-medium text-gray-500">Độc giả</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-500">Sách</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-500">Lý do</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-500">Số tiền</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-500">Trạng thái</th>
-                <th className="px-4 py-3 text-right font-medium text-gray-500">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {fines?.data.map((f) => (
-                <tr key={f.id}>
-                  <td className="px-4 py-3">{f.borrow_record?.user?.name}</td>
-                  <td className="px-4 py-3">{f.borrow_record?.book?.title}</td>
-                  <td className="px-4 py-3">{f.reason}</td>
-                  <td className="px-4 py-3">{Number(f.amount).toLocaleString("vi-VN")}đ</td>
-                  <td className="px-4 py-3">
-                    <span className={`badge ${f.status === "paid" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                      {f.status === "paid" ? "Đã thu" : "Chưa thu"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    {f.status === "unpaid" && (
-                      <button onClick={() => handleMarkPaid(f.id)} className="text-sm text-primary-600 hover:underline">
-                        Xác nhận đã thu tiền
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-              {fines && fines.data.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
-                    Chưa có phí phạt nào.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+          {rows.map((f) => (
+            <tr key={f.id}>
+              <td>
+                <UserCell user={f.borrow_record?.user} />
+              </td>
+              <td className="min-w-[220px]">
+                <BookCell book={f.borrow_record?.book} />
+              </td>
+              <td className="text-gray-600">{f.reason}</td>
+              <td className="whitespace-nowrap font-bold text-rose-600">{money(f.amount)}</td>
+              <td>
+                <div className="flex justify-end">
+                  {f.status === "unpaid" ? (
+                    <button onClick={() => handleMarkPaid(f.id)} className="act-success">
+                      <BadgeCheck size={14} /> Đã thu tiền
+                    </button>
+                  ) : (
+                    <Pill tone="green">Đã thu</Pill>
+                  )}
+                </div>
+              </td>
+            </tr>
+          ))}
+        </DataTable>
       )}
     </div>
   );

@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import Footer from "./Footer";
+import FloatingWidgets from "./FloatingWidgets";
+import { BackToTop, PageTransition, ScrollProgress } from "./Motion";
 
 function NavItem({ to, children }) {
   return (
@@ -31,6 +33,7 @@ export default function Layout() {
 
   return (
     <div className="flex min-h-screen flex-col">
+      <ScrollProgress />
       <header
         className={`sticky top-0 z-40 transition-all duration-300 ${
           scrolled ? "glass shadow-soft" : "border-b border-transparent bg-white/90 backdrop-blur"
@@ -41,12 +44,12 @@ export default function Layout() {
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 to-accent-500 text-lg shadow-soft transition-transform duration-300 group-hover:rotate-[-8deg] group-hover:scale-110">
               📚
             </span>
-            <span>
+            <span className="whitespace-nowrap">
               Thư Viện <span className="text-gradient">Thông Minh</span>
             </span>
           </Link>
 
-          <nav className="hidden items-center gap-1 md:flex">
+          <nav className="hidden items-center gap-0.5 lg:flex">
             <NavItem to="/">Trang chủ</NavItem>
             <NavItem to="/sach">Danh sách sách</NavItem>
             <NavItem to="/tim-kiem-ai">🤖 Hỏi AI</NavItem>
@@ -66,12 +69,12 @@ export default function Layout() {
               <>
                 <Link
                   to="/tai-khoan"
-                  className="hidden items-center gap-2 rounded-full py-1 pl-1 pr-3 text-sm text-gray-600 transition hover:bg-gray-100 sm:flex"
+                  className="hidden items-center gap-2 rounded-full py-1 pl-1 pr-1 text-sm xl:pr-3 text-gray-600 transition hover:bg-gray-100 sm:flex"
                 >
                   <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-primary-500 to-accent-500 text-xs font-bold text-white">
                     {user?.name?.charAt(0)?.toUpperCase() || "?"}
                   </span>
-                  <span className="font-medium">{user?.name}</span>
+                  <span className="hidden max-w-[9rem] truncate font-medium xl:inline">{user?.name}</span>
                 </Link>
                 <button onClick={handleLogout} className="btn-outline !px-3 !py-2">
                   Đăng xuất
@@ -82,14 +85,14 @@ export default function Layout() {
                 <Link to="/dang-nhap" className="btn-outline !px-3 !py-2">
                   Đăng nhập
                 </Link>
-                <Link to="/dang-ky" className="btn-primary !px-3 !py-2">
+                <Link to="/dang-ky" className="btn-primary !hidden !px-3 !py-2 sm:!inline-flex">
                   Đăng ký
                 </Link>
               </>
             )}
             <button
               onClick={() => setMobileOpen((v) => !v)}
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100 md:hidden"
+              className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100 lg:hidden"
               aria-label="Mở menu"
             >
               {mobileOpen ? "✕" : "☰"}
@@ -98,7 +101,7 @@ export default function Layout() {
         </div>
 
         <div
-          className={`overflow-hidden transition-all duration-300 md:hidden ${
+          className={`overflow-hidden transition-all duration-300 lg:hidden ${
             mobileOpen ? "max-h-96 border-t border-gray-100" : "max-h-0"
           }`}
         >
@@ -120,10 +123,14 @@ export default function Layout() {
       </header>
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">
-        <Outlet />
+        <PageTransition>
+          <Outlet />
+        </PageTransition>
       </main>
 
       <Footer />
+      <BackToTop side="left" />
+      <FloatingWidgets />
     </div>
   );
 }

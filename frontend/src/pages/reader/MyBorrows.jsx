@@ -108,9 +108,9 @@ export default function MyBorrows() {
                       </Link>
                       {r.renewed_count > 0 && <p className="text-xs text-gray-400">Đã gia hạn {r.renewed_count} lần</p>}
                     </td>
-                    <td className="px-4 py-3">{r.borrow_date?.slice(0, 10)}</td>
-                    <td className="px-4 py-3">{r.due_date?.slice(0, 10)}</td>
-                    <td className="px-4 py-3">{r.return_date ? r.return_date.slice(0, 10) : "-"}</td>
+                    <td className="whitespace-nowrap px-4 py-3">{r.borrow_date?.slice(0, 10)}</td>
+                    <td className="whitespace-nowrap px-4 py-3">{r.due_date?.slice(0, 10)}</td>
+                    <td className="whitespace-nowrap px-4 py-3">{r.return_date ? r.return_date.slice(0, 10) : "-"}</td>
                     <td className="px-4 py-3">
                       <StatusBadge status={r.status} />
                     </td>

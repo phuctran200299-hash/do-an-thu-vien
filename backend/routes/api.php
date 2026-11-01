@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\BorrowController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\FineController;
+use App\Http\Controllers\Api\HomeController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ReservationController;
 use App\Http\Controllers\Api\ReviewController;
@@ -29,6 +30,7 @@ Route::post('/login', [AuthController::class, 'login']);
 // ----- Công khai: sách, tác giả, thể loại, đánh giá, AI -----
 Route::get('/books', [BookController::class, 'index']);
 Route::get('/books/featured', [BookController::class, 'featured']);
+Route::get('/home/overview', [HomeController::class, 'overview']);
 Route::get('/books/{book}', [BookController::class, 'show']);
 Route::get('/books/{book}/reviews', [ReviewController::class, 'index']);
 Route::get('/books/{book}/similar', [AiController::class, 'similar']);
@@ -74,6 +76,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('role:staff,admin')->group(function () {
         Route::get('/borrow-requests', [BorrowController::class, 'index']);
         Route::get('/borrow-requests/overdue', [BorrowController::class, 'overdue']);
+        Route::get('/borrow-requests/summary', [BorrowController::class, 'summary']);
         Route::put('/borrow-requests/{borrowRecord}/approve', [BorrowController::class, 'approve']);
         Route::put('/borrow-requests/{borrowRecord}/reject', [BorrowController::class, 'reject']);
         Route::put('/borrow-requests/{borrowRecord}/return', [BorrowController::class, 'returnBook']);

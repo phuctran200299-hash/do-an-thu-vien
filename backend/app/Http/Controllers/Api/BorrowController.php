@@ -175,7 +175,44 @@ class BorrowController extends Controller
             $query->where('book_id', $request->integer('book_id'));
         }
 
+        $this->applyKeyword($query, $request);
+
         return response()->json($query->orderByDesc('created_at')->paginate(15));
+    }
+
+    /**
+     * Lọc theo từ khoá: tên/email độc giả hoặc tên sách.
+     */
+    private function applyKeyword($query, Request $request): void
+    {
+        if (! $request->filled('q')) {
+            return;
+        }
+
+        $keyword = $request->string('q')->toString();
+        $query->where(function ($q) use ($keyword) {
+            $q->whereHas('user', fn ($u) => $u->where('name', 'like', "%{$keyword}%")->orWhere('email', 'like', "%{$keyword}%"))
+                ->orWhereHas('book', fn ($b) => $b->where('title', 'like', "%{$keyword}%"));
+        });
+    }
+
+    /**
+     * Số lượng giao dịch theo từng trạng thái (dùng cho các tab và huy hiệu ở khu vực nghiệp vụ),
+     * gộp vào một truy vấn thay vì gọi danh sách nhiều lần.
+     */
+    public function summary()
+    {
+        BorrowRecord::syncOverdueStatuses();
+
+        $counts = BorrowRecord::selectRaw('status, COUNT(*) as total')->groupBy('status')->pluck('total', 'status');
+
+        return response()->json(collect([
+            BorrowRecord::STATUS_PENDING,
+            BorrowRecord::STATUS_BORROWED,
+            BorrowRecord::STATUS_OVERDUE,
+            BorrowRecord::STATUS_RETURNED,
+            BorrowRecord::STATUS_CANCELLED,
+        ])->mapWithKeys(fn ($s) => [$s => (int) ($counts[$s] ?? 0)]));
     }
 
     /**
@@ -185,8 +222,10 @@ class BorrowController extends Controller
     {
         BorrowRecord::syncOverdueStatuses();
 
-        $query = BorrowRecord::with(['user', 'book'])
+        $query = BorrowRecord::with(['user', 'book', 'payments', 'fines'])
             ->where('status', BorrowRecord::STATUS_OVERDUE);
+
+        $this->applyKeyword($query, $request);
 
         return response()->json(
             $query->orderBy('due_date')->paginate(15)

@@ -45,10 +45,13 @@ class AiController extends Controller
             [$score, $matchedOn] = $this->scoreBookAgainstKeywords($book, $keywords);
 
             return ['book' => $book, 'score' => $score, 'matched_on' => $matchedOn];
-        })->filter(fn ($item) => $item['score'] > 0)
+        })->filter(fn ($item) => ! empty($item['matched_on']))
             ->sortByDesc('score')
-            ->take(10)
             ->values();
+
+        // bỏ các kết quả quá yếu so với kết quả tốt nhất để danh sách gợi ý tập trung hơn
+        $topScore = $scored->first()['score'] ?? 0;
+        $scored = $scored->filter(fn ($item) => $item['score'] >= $topScore * 0.5)->take(10)->values();
 
         $results = $scored->map(function ($item) {
             $book = $item['book'];
@@ -173,7 +176,7 @@ class AiController extends Controller
     public function adminLogs(Request $request)
     {
         $topBooks = AiRecommendationLog::selectRaw('book_id, COUNT(*) as total')
-            ->with('book:id,title')
+            ->with('book:id,title,cover_image')
             ->groupBy('book_id')
             ->orderByDesc('total')
             ->limit(10)
@@ -199,47 +202,80 @@ class AiController extends Controller
         ]);
     }
 
+    /**
+     * Tách câu hỏi thành các từ khoá, mỗi từ khoá giữ cả dạng có dấu (raw) và không dấu (plain).
+     * Bỏ các từ dừng không mang ý nghĩa tìm kiếm ("tôi", "muốn", "tìm", "sách"...).
+     */
     private function extractKeywords(string $query): array
     {
-        $stopWords = ['toi', 'muon', 'tim', 'sach', 've', 'la', 've', 'cho', 'nguoi', 'cac', 'mot', 'cuon', 'co', 'the', 'va', 'nhung'];
+        $stopWords = ['toi', 'muon', 'tim', 'sach', 've', 'la', 'cho', 'nguoi', 'cac', 'mot', 'cuon', 'co', 'the', 'va', 'nhung', 'hay', 'nao', 'gi', 'doc'];
 
-        $normalized = $this->stripAccents(mb_strtolower($query));
-        $words = preg_split('/[^a-z0-9]+/', $normalized, -1, PREG_SPLIT_NO_EMPTY);
+        $raw = preg_split('/[^\p{L}\p{N}]+/u', mb_strtolower($query), -1, PREG_SPLIT_NO_EMPTY);
+        $keywords = [];
+        foreach ($raw as $word) {
+            $plain = $this->stripAccents($word);
+            if (! in_array($plain, $stopWords, true)) {
+                $keywords[] = ['raw' => $word, 'plain' => $plain];
+            }
+        }
 
-        return array_values(array_diff($words, $stopWords));
+        return $keywords;
     }
 
+    /**
+     * Tính điểm phù hợp của một cuốn sách. So khớp theo từ nguyên vẹn (không theo chuỗi con) để
+     * "quen" không khớp nhầm "Eloquent"; khớp đúng cả dấu được trọn điểm, chỉ khớp khi bỏ dấu
+     * (vd "thói" với "thời") được 40% điểm; khớp nguyên cụm hai từ liên tiếp được cộng thêm.
+     */
     private function scoreBookAgainstKeywords(Book $book, array $keywords): array
     {
         $score = 0;
         $matchedOn = [];
+        $matchedKeywords = [];
 
-        $title = $this->stripAccents(mb_strtolower($book->title));
-        $description = $this->stripAccents(mb_strtolower((string) $book->description));
-        $categoryName = $this->stripAccents(mb_strtolower((string) $book->category?->name));
-        $authorNames = $this->stripAccents(mb_strtolower($book->authors->pluck('name')->implode(' ')));
+        $fields = [
+            'title' => [$book->title, 3],
+            'category' => [(string) $book->category?->name, 2],
+            'author' => [$book->authors->pluck('name')->implode(' '), 2],
+            'description' => [(string) $book->description, 1],
+        ];
 
-        foreach ($keywords as $word) {
-            if (str_contains($title, $word)) {
-                $score += 3;
-                $matchedOn['title'] = true;
+        foreach ($fields as $field => [$text, $weight]) {
+            $rawTokens = preg_split('/[^\p{L}\p{N}]+/u', mb_strtolower($text), -1, PREG_SPLIT_NO_EMPTY);
+            $plainTokens = array_map(fn ($t) => $this->stripAccents($t), $rawTokens);
+
+            $fieldScore = 0;
+            foreach ($keywords as $k => $kw) {
+                if (in_array($kw['raw'], $rawTokens, true)) {
+                    $fieldScore += $weight;
+                    $matchedKeywords[$k] = true;
+                } elseif (in_array($kw['plain'], $plainTokens, true)) {
+                    $fieldScore += $weight * 0.4;
+                    $matchedKeywords[$k] = true;
+                }
             }
-            if (str_contains($categoryName, $word)) {
-                $score += 2;
-                $matchedOn['category'] = true;
+            if ($fieldScore === 0) {
+                continue;
             }
-            if (str_contains($authorNames, $word)) {
-                $score += 2;
-                $matchedOn['author'] = true;
+
+            $plainText = ' '.implode(' ', $plainTokens).' ';
+            for ($i = 0; $i < count($keywords) - 1; $i++) {
+                if (str_contains($plainText, ' '.$keywords[$i]['plain'].' '.$keywords[$i + 1]['plain'].' ')) {
+                    $fieldScore += 2 * $weight;
+                }
             }
-            if (str_contains($description, $word)) {
-                $score += 1;
-                $matchedOn['description'] = true;
-            }
+
+            $score += $fieldScore;
+            $matchedOn[$field] = true;
         }
 
-        // ưu tiên nhẹ sách được đánh giá cao khi điểm khớp từ khoá bằng nhau
-        $score += (float) $book->avg_rating * 0.1;
+        // nhân theo độ phủ: sách khớp càng nhiều từ khoá khác nhau càng được ưu tiên
+        $score *= count($matchedKeywords) / count($keywords);
+
+        // ưu tiên nhẹ sách được đánh giá cao khi điểm khớp từ khoá bằng nhau (chỉ áp dụng khi đã khớp)
+        if ($score > 0) {
+            $score += (float) $book->avg_rating * 0.1;
+        }
 
         return [$score, $matchedOn];
     }

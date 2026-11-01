@@ -16,6 +16,8 @@ class DatabaseSeeder extends Seeder
             BookSeeder::class,
             BorrowRecordSeeder::class,
             Phase2DemoSeeder::class,
+            RichDemoSeeder::class,
+            BackfillActivitySeeder::class,
         ]);
     }
 }

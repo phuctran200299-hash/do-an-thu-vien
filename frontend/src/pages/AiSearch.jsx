@@ -1,21 +1,23 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { aiSearchApi } from "../api/ai";
+import BookCover from "../components/BookCover";
 
 export default function AiSearch() {
-  const [query, setQuery] = useState("");
+  const [searchParams] = useSearchParams();
+  const initialQuery = searchParams.get("q") || "";
+  const [query, setQuery] = useState(initialQuery);
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [searched, setSearched] = useState(false);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!query.trim()) return;
+  const runSearch = async (text) => {
+    if (!text.trim()) return;
     setLoading(true);
     setError(null);
     try {
-      const res = await aiSearchApi(query);
+      const res = await aiSearchApi(text);
       setResults(res.data.results);
       setSearched(true);
     } catch (e2) {
@@ -23,6 +25,17 @@ export default function AiSearch() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // mở từ khung chat AI với ?q=... thì tìm ngay
+  useEffect(() => {
+    if (initialQuery) runSearch(initialQuery);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialQuery]);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    runSearch(query);
   };
 
   const samples = [
@@ -81,12 +94,8 @@ export default function AiSearch() {
               to={`/sach/${book.id}`}
               className="card flex gap-4 p-4 hover:shadow-md transition"
             >
-              <div className="flex h-24 w-16 flex-shrink-0 items-center justify-center rounded bg-gray-100 text-2xl">
-                {book.cover_image ? (
-                  <img src={book.cover_image} alt={book.title} className="h-full w-full rounded object-cover" />
-                ) : (
-                  "📖"
-                )}
+              <div className="group h-24 w-16 flex-shrink-0 overflow-hidden rounded shadow-soft">
+                <BookCover book={book} size="sm" />
               </div>
               <div>
                 <h3 className="font-semibold text-gray-900">{book.title}</h3>

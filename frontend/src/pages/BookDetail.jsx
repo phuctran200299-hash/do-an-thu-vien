@@ -6,7 +6,9 @@ import { payBorrowApi } from "../api/payments";
 import { addFavoriteApi, getFavoritesApi, removeFavoriteApi } from "../api/favorites";
 import { createReservationApi } from "../api/reservations";
 import { aiSimilarApi } from "../api/ai";
+import { motion } from "framer-motion";
 import BookCard from "../components/BookCard";
+import BookCover from "../components/BookCover";
 import { useAuth } from "../context/AuthContext";
 
 export default function BookDetail() {
@@ -110,13 +112,14 @@ export default function BookDetail() {
     <div>
       <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
         <div className="md:col-span-1">
-          <div className="aspect-[3/4] overflow-hidden rounded-lg bg-gray-100">
-            {book.cover_image ? (
-              <img src={book.cover_image} alt={book.title} className="h-full w-full object-cover" />
-            ) : (
-              <div className="flex h-full items-center justify-center text-6xl">📖</div>
-            )}
-          </div>
+          <motion.div
+            className="book-3d group aspect-[3/4] overflow-hidden rounded-lg shadow-card-hover"
+            initial={{ opacity: 0, rotateY: -25, x: -30 }}
+            animate={{ opacity: 1, rotateY: 0, x: 0 }}
+            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <BookCover book={book} size="lg" />
+          </motion.div>
         </div>
 
         <div className="md:col-span-2">

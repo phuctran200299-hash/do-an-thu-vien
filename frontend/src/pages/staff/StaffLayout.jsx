@@ -1,18 +1,26 @@
+import { BookCheck, CreditCard, Hourglass, LayoutDashboard, Repeat, UserSearch } from "lucide-react";
 import AdminShell from "../../components/AdminShell";
 import { useAuth } from "../../context/AuthContext";
 
-const baseLinks = [
-  { to: "/nhan-vien/muon-tra", label: "Xử lý mượn - trả", icon: "🔁" },
-  { to: "/nhan-vien/tinh-trang-sach", label: "Tình trạng sách", icon: "📗" },
-  { to: "/nhan-vien/giao-dich", label: "Giao dịch & phí phạt", icon: "💳" },
-  { to: "/nhan-vien/dat-truoc", label: "Hàng chờ đặt trước", icon: "⏳" },
-  { to: "/nhan-vien/doc-gia", label: "Tra cứu độc giả", icon: "🔍" },
+const workLinks = [
+  { to: "/nhan-vien/muon-tra", label: "Xử lý mượn - trả", icon: Repeat, badgeKey: "pending" },
+  { to: "/nhan-vien/dat-truoc", label: "Hàng chờ đặt trước", icon: Hourglass },
+  { to: "/nhan-vien/giao-dich", label: "Giao dịch & phí phạt", icon: CreditCard },
+];
+
+const lookupLinks = [
+  { to: "/nhan-vien/tinh-trang-sach", label: "Tình trạng sách", icon: BookCheck },
+  { to: "/nhan-vien/doc-gia", label: "Tra cứu độc giả", icon: UserSearch },
 ];
 
 export default function StaffLayout() {
   const { isAdmin } = useAuth();
 
-  const links = isAdmin ? [...baseLinks, { to: "/quan-tri", label: "Về trang Quản trị", icon: "⚙️" }] : baseLinks;
+  const sections = [
+    { title: "Nghiệp vụ", links: workLinks },
+    { title: "Tra cứu", links: lookupLinks },
+    ...(isAdmin ? [{ title: "Quản trị", links: [{ to: "/quan-tri", label: "Về Bảng điều khiển", end: true, icon: LayoutDashboard }] }] : []),
+  ];
 
-  return <AdminShell links={links} roleLabel="Khu vực Nhân viên thư viện" brand="Nghiệp vụ thư viện" />;
+  return <AdminShell sections={sections} roleLabel="Nhân viên" brand="Nghiệp vụ thư viện" />;
 }

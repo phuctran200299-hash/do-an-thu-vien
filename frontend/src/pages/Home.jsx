@@ -1,10 +1,20 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { getBooksApi, getFeaturedBooksApi } from "../api/books";
-import { getCategoriesApi } from "../api/catalog";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { getFeaturedBooksApi, getHomeOverviewApi } from "../api/books";
 import { aiRecommendationsApi } from "../api/ai";
 import BookCard from "../components/BookCard";
+import HeroSlider from "../components/HeroSlider";
+import {
+  AuthorStrip,
+  CategoryGrid,
+  HowItWorks,
+  RecentBorrowsTicker,
+  ReviewWall,
+  SectionHeader,
+  StatsBand,
+} from "../components/home/HomeSections";
 import { useAuth } from "../context/AuthContext";
 
 const container = {
@@ -16,8 +26,13 @@ const item = {
   show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] } },
 };
 
-function BookRow({ title, icon, books }) {
+function BookRow({ title, icon, subtitle, to, books }) {
+  const scroller = useRef(null);
   if (!books?.length) return null;
+  const scrollBy = (dir) => {
+    const el = scroller.current;
+    el?.scrollBy({ left: dir * el.clientWidth * 0.8, behavior: "smooth" });
+  };
   return (
     <motion.section
       className="mb-14"
@@ -26,22 +41,49 @@ function BookRow({ title, icon, books }) {
       viewport={{ once: true, margin: "-60px" }}
       transition={{ duration: 0.5 }}
     >
-      <h2 className="section-title mb-4">
-        <span>{icon}</span> {title}
-      </h2>
-      <motion.div
-        className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
-        variants={container}
-        initial="hidden"
-        whileInView="show"
-        viewport={{ once: true, margin: "-60px" }}
-      >
-        {books.map((b) => (
-          <motion.div key={b.id} variants={item}>
-            <BookCard book={b} />
-          </motion.div>
-        ))}
-      </motion.div>
+      <SectionHeader
+        title={
+          <>
+            <span>{icon}</span> {title}
+          </>
+        }
+        subtitle={subtitle}
+        to={to}
+      />
+      <div className="group/row relative">
+        <motion.div
+          ref={scroller}
+          className="no-scrollbar -mx-1 flex snap-x snap-mandatory gap-4 overflow-x-auto px-1 pb-2"
+          variants={container}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: "-60px" }}
+        >
+          {books.map((b) => (
+            <motion.div
+              key={b.id}
+              variants={item}
+              className="w-[calc((100%-1rem)/2)] shrink-0 snap-start sm:w-[calc((100%-2rem)/3)] md:w-[calc((100%-3rem)/4)] lg:w-[calc((100%-4rem)/5)]"
+            >
+              <BookCard book={b} />
+            </motion.div>
+          ))}
+        </motion.div>
+        {books.length > 2 &&
+          [
+            [-1, ChevronLeft, "-left-4"],
+            [1, ChevronRight, "-right-4"],
+          ].map(([dir, Icon, pos]) => (
+            <button
+              key={dir}
+              onClick={() => scrollBy(dir)}
+              aria-label={dir < 0 ? "Xem sách trước" : "Xem thêm sách"}
+              className={`absolute top-[38%] z-10 hidden h-10 w-10 items-center justify-center rounded-full bg-white text-gray-700 opacity-0 shadow-card ring-1 ring-gray-100 transition hover:text-primary-600 group-hover/row:opacity-100 md:flex ${pos}`}
+            >
+              <Icon size={20} />
+            </button>
+          ))}
+      </div>
     </motion.section>
   );
 }
@@ -78,16 +120,14 @@ export default function Home() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [recommended, setRecommended] = useState(null);
-  const [stats, setStats] = useState(null);
+  const [overview, setOverview] = useState(null);
 
   useEffect(() => {
     getFeaturedBooksApi()
       .then((res) => setData(res.data))
       .finally(() => setLoading(false));
 
-    Promise.all([getBooksApi({ per_page: 1 }), getCategoriesApi()]).then(([books, categories]) => {
-      setStats({ totalBooks: books.data.total, totalCategories: categories.data.categories.length });
-    });
+    getHomeOverviewApi().then((res) => setOverview(res.data));
   }, []);
 
   useEffect(() => {
@@ -98,60 +138,13 @@ export default function Home() {
 
   return (
     <div>
-      {/* ================= HERO ================= */}
-      <section className="relative mb-16 overflow-hidden rounded-3xl bg-gradient-to-br from-primary-700 via-primary-600 to-accent-600 px-6 py-16 text-white shadow-card sm:px-12">
-        <div className="blob -left-16 -top-16 h-64 w-64 bg-accent-400" />
-        <div className="blob -bottom-24 -right-10 h-72 w-72 bg-primary-300 [animation-delay:-4s]" />
-        <div className="absolute inset-0 bg-grid-pattern bg-[length:32px_32px] opacity-20" />
-        <span className="absolute right-10 top-10 hidden text-6xl opacity-20 animate-float sm:block">📖</span>
-        <span className="absolute bottom-10 left-1/2 hidden text-5xl opacity-20 animate-float-slow md:block">✨</span>
+      {/* ================= HERO SLIDER ================= */}
+      <HeroSlider
+        stats={overview && { totalBooks: overview.stats.books, totalCategories: overview.categories.length }}
+        featured={data?.admin_featured}
+      />
 
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className="relative"
-        >
-          <span className="mb-4 inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide backdrop-blur">
-            ✨ Trải nghiệm đọc sách thế hệ mới
-          </span>
-          <h1 className="max-w-2xl text-4xl font-extrabold leading-tight sm:text-5xl">
-            Hệ thống Quản lý Thư viện <span className="text-white/90">Sách Thông minh</span>
-          </h1>
-          <p className="mt-4 max-w-xl text-base text-primary-50/90 sm:text-lg">
-            Tra cứu, tìm kiếm và mượn sách dễ dàng. Khám phá kho sách đa dạng và theo dõi lịch sử mượn - trả của bạn
-            mọi lúc, mọi nơi.
-          </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link to="/sach" className="btn bg-white text-primary-700 shadow-card hover:-translate-y-0.5 hover:shadow-card-hover">
-              Khám phá sách ngay
-            </Link>
-            <Link
-              to="/tim-kiem-ai"
-              className="btn border-2 border-white/60 text-white backdrop-blur hover:-translate-y-0.5 hover:bg-white/10"
-            >
-              🤖 Hỏi AI tìm sách
-            </Link>
-          </div>
-
-          {stats && (
-            <div className="mt-10 flex flex-wrap gap-8 border-t border-white/20 pt-6">
-              <div>
-                <p className="text-3xl font-extrabold">{stats.totalBooks}+</p>
-                <p className="text-sm text-primary-100/80">Đầu sách</p>
-              </div>
-              <div>
-                <p className="text-3xl font-extrabold">{stats.totalCategories}</p>
-                <p className="text-sm text-primary-100/80">Thể loại</p>
-              </div>
-              <div>
-                <p className="text-3xl font-extrabold">24/7</p>
-                <p className="text-sm text-primary-100/80">Truy cập mọi lúc</p>
-              </div>
-            </div>
-          )}
-        </motion.div>
-      </section>
+      <StatsBand stats={overview?.stats} />
 
       {/* ================= FEATURES ================= */}
       <motion.section
@@ -187,12 +180,18 @@ export default function Home() {
       )}
       {data && (
         <>
-          <BookRow title="Sách nổi bật" icon="📌" books={data.admin_featured} />
-          <BookRow title="Sách mới" icon="📗" books={data.newest} />
-          <BookRow title="Sách được mượn nhiều" icon="🔥" books={data.most_borrowed} />
-          <BookRow title="Sách đánh giá cao" icon="⭐" books={data.top_rated} />
+          <BookRow title="Sách nổi bật" icon="📌" subtitle="Do thủ thư tuyển chọn và giới thiệu." books={data.admin_featured} />
+          <CategoryGrid categories={overview?.categories} />
+          <BookRow title="Sách mới" icon="📗" subtitle="Những đầu sách vừa được bổ sung vào kho." to="/sach" books={data.newest} />
+          <RecentBorrowsTicker items={overview?.recent_borrows} />
+          <BookRow title="Sách được mượn nhiều" icon="🔥" subtitle="Được độc giả mượn đọc nhiều nhất." books={data.most_borrowed} />
+          <AuthorStrip authors={overview?.authors} />
+          <BookRow title="Sách đánh giá cao" icon="⭐" subtitle="Điểm đánh giá trung bình cao nhất." to="/sach?sort=avg_rating:desc" books={data.top_rated} />
+          <ReviewWall reviews={overview?.reviews} />
         </>
       )}
+
+      <HowItWorks />
 
       {/* ================= CTA BANNER ================= */}
       {!isReader && (

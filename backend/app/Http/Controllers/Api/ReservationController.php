@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Book;
 use App\Models\Reservation;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 class ReservationController extends Controller
@@ -78,11 +79,23 @@ class ReservationController extends Controller
             return response()->json(['message' => 'Bạn không có quyền huỷ đặt trước này.'], 403);
         }
 
-        if ($reservation->status !== Reservation::STATUS_WAITING) {
-            return response()->json(['message' => 'Chỉ có thể huỷ lượt đặt trước khi đang ở trạng thái Đang chờ.'], 422);
+        if (! in_array($reservation->status, [Reservation::STATUS_WAITING, Reservation::STATUS_READY], true)) {
+            return response()->json(['message' => 'Chỉ có thể huỷ lượt đặt trước đang chờ hoặc đang sẵn sàng.'], 422);
         }
 
-        $reservation->update(['status' => Reservation::STATUS_CANCELLED]);
+        DB::transaction(function () use ($reservation) {
+            $wasReady = $reservation->status === Reservation::STATUS_READY;
+            $reservation->update(['status' => Reservation::STATUS_CANCELLED]);
+
+            // nhường bản sách đang giữ cho người xếp hàng kế tiếp, tránh để sách bị "giữ chỗ" vô thời hạn
+            if ($wasReady) {
+                Reservation::where('book_id', $reservation->book_id)
+                    ->where('status', Reservation::STATUS_WAITING)
+                    ->oldest()
+                    ->first()
+                    ?->update(['status' => Reservation::STATUS_READY]);
+            }
+        });
 
         return response()->json(['message' => 'Đã huỷ đặt trước.']);
     }

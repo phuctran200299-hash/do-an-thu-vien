@@ -109,7 +109,7 @@ body {
 
 /* ============ Fancy focus ring for nav pills ============ */
 .nav-pill {
-  @apply relative rounded-lg px-3 py-2 text-sm font-semibold text-gray-600 transition-colors duration-200 hover:text-primary-700;
+  @apply relative whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold text-gray-600 transition-colors duration-200 hover:text-primary-700;
 }
 .nav-pill.active {
   @apply text-primary-700;
@@ -131,4 +131,104 @@ body {
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* ============ Bìa sách tự sinh: tia sáng lướt qua khi hover ============ */
+.book-cover-shine {
+  @apply pointer-events-none absolute inset-0;
+  background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.35) 48%, transparent 66%);
+  transform: translateX(-120%);
+  transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.group:hover .book-cover-shine {
+  transform: translateX(120%);
+}
+.book-3d {
+  transform-style: preserve-3d;
+  perspective: 900px;
+  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.book-3d:hover {
+  transform: perspective(900px) rotateY(-8deg) rotateX(3deg) translateY(-4px);
+}
+
+/* ============ Hàng trong bảng xuất hiện lần lượt ============ */
+main table tbody tr {
+  animation: fade-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transition: background-color 0.2s ease;
+}
+main table tbody tr:hover {
+  @apply bg-primary-50/60;
+}
+main table tbody tr:nth-child(1) { animation-delay: 0.02s; }
+main table tbody tr:nth-child(2) { animation-delay: 0.05s; }
+main table tbody tr:nth-child(3) { animation-delay: 0.08s; }
+main table tbody tr:nth-child(4) { animation-delay: 0.11s; }
+main table tbody tr:nth-child(5) { animation-delay: 0.14s; }
+main table tbody tr:nth-child(6) { animation-delay: 0.17s; }
+main table tbody tr:nth-child(7) { animation-delay: 0.2s; }
+main table tbody tr:nth-child(8) { animation-delay: 0.23s; }
+main table tbody tr:nth-child(9) { animation-delay: 0.26s; }
+main table tbody tr:nth-child(n + 10) { animation-delay: 0.29s; }
+
+/* ============ Badge trạng thái: nhịp đập nhẹ cho trạng thái cần chú ý ============ */
+.badge-attention {
+  animation: pulse-ring 1.6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* ============ Bảng dữ liệu khu vực quản trị ============ */
+.admin-table thead th {
+  @apply whitespace-nowrap border-b border-gray-100 bg-gray-50/80 px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-gray-500;
+}
+.admin-table tbody td {
+  @apply border-b border-gray-100 px-4 py-3.5 align-middle text-gray-700;
+}
+.admin-table tbody tr:last-child td {
+  @apply border-b-0;
+}
+
+/* ============ Nút thao tác nhỏ trong bảng ============ */
+.act {
+  @apply inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition-all duration-150
+    active:scale-95 disabled:cursor-not-allowed disabled:opacity-40;
+}
+.act-success {
+  @apply act bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200 hover:bg-emerald-600 hover:text-white hover:ring-emerald-600;
+}
+.act-danger {
+  @apply act bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200 hover:bg-rose-600 hover:text-white hover:ring-rose-600;
+}
+.act-primary {
+  @apply act bg-primary-50 text-primary-700 ring-1 ring-inset ring-primary-200 hover:bg-primary-600 hover:text-white hover:ring-primary-600;
+}
+.act-warning {
+  @apply act bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200 hover:bg-amber-500 hover:text-white hover:ring-amber-500;
+}
+.act-ghost {
+  @apply act text-gray-500 hover:bg-gray-100 hover:text-gray-800;
+}
+
+/* ============ Dải chạy ngang "Vừa được mượn" ============ */
+.marquee-track {
+  animation: marquee 50s linear infinite;
+}
+.marquee:hover .marquee-track {
+  animation-play-state: paused;
+}
+@keyframes marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track {
+    animation: none;
+  }
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }

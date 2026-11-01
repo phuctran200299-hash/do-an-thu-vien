@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -34,6 +35,19 @@ class Book extends Model
         'avg_rating' => 'decimal:2',
         'is_featured' => 'boolean',
     ];
+
+    /**
+     * Ảnh bìa lưu dạng đường dẫn tương đối (vd: covers/mat-biec.jpg) trong thư mục public,
+     * trả về URL đầy đủ để giao diện dùng trực tiếp; URL tuyệt đối do Admin nhập thì giữ nguyên.
+     */
+    protected function coverImage(): Attribute
+    {
+        return Attribute::make(
+            get: fn (?string $value) => $value && ! preg_match('#^https?://#i', $value) ? url($value) : $value,
+            // ảnh nằm trên chính máy chủ này thì chỉ lưu đường dẫn tương đối, tránh phụ thuộc tên miền
+            set: fn (?string $value) => $value ? preg_replace('#^'.preg_quote(url('/'), '#').'/#', '', $value) : null,
+        );
+    }
 
     public function category(): BelongsTo
     {

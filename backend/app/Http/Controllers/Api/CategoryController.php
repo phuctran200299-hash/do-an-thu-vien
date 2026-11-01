@@ -13,7 +13,7 @@ class CategoryController extends Controller
     /** UC02 - danh sách thể loại (công khai, dùng cho bộ lọc). */
     public function index()
     {
-        return response()->json(['categories' => Category::orderBy('name')->get()]);
+        return response()->json(['categories' => Category::withCount('books')->orderBy('name')->get()]);
     }
 
     public function show(Category $category)

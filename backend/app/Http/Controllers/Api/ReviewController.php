@@ -35,7 +35,7 @@ class ReviewController extends Controller
 
         $hasBorrowed = BorrowRecord::where('user_id', $user->id)
             ->where('book_id', $book->id)
-            ->where('status', '!=', BorrowRecord::STATUS_CANCELLED)
+            ->whereIn('status', [BorrowRecord::STATUS_BORROWED, BorrowRecord::STATUS_OVERDUE, BorrowRecord::STATUS_RETURNED])
             ->exists();
 
         if (! $hasBorrowed) {

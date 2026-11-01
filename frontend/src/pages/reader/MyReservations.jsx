@@ -55,7 +55,7 @@ export default function MyReservations() {
               </div>
               <div className="flex items-center gap-3">
                 <span className={`badge ${info.className}`}>{info.label}</span>
-                {r.status === "cho_sach" && (
+                {["cho_sach", "san_sang"].includes(r.status) && (
                   <button onClick={() => handleCancel(r.id)} className="text-sm text-red-600 hover:underline">
                     Huỷ
                   </button>

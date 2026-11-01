@@ -1,65 +1,90 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { Hourglass } from "lucide-react";
 import { getReservationsApi } from "../../api/reservations";
+import { BookCell, DataTable, PageHeader, Pagination, Pill, Tabs, UserCell } from "../../components/admin/ui";
+import { fmtDateTime } from "../../components/admin/format";
 
-const STATUS_LABEL = {
-  cho_sach: { label: "Đang chờ", className: "bg-yellow-100 text-yellow-800" },
-  san_sang: { label: "Sẵn sàng", className: "bg-green-100 text-green-800" },
-  hoan_tat: { label: "Hoàn tất", className: "bg-gray-100 text-gray-600" },
-  da_huy: { label: "Đã huỷ", className: "bg-gray-100 text-gray-500" },
+const STATUS = {
+  cho_sach: { label: "Đang chờ", tone: "yellow" },
+  san_sang: { label: "Sẵn sàng", tone: "green" },
+  hoan_tat: { label: "Hoàn tất", tone: "blue" },
+  da_huy: { label: "Đã huỷ", tone: "gray" },
 };
 
+const TABS = [
+  { value: "cho_sach", label: "Đang chờ", tone: "bg-amber-100 text-amber-700" },
+  { value: "san_sang", label: "Sẵn sàng", tone: "bg-emerald-100 text-emerald-700" },
+  { value: "hoan_tat", label: "Hoàn tất" },
+  { value: "da_huy", label: "Đã huỷ" },
+];
+
 export default function ReservationQueue() {
-  const [reservations, setReservations] = useState(null);
+  const [status, setStatus] = useState("cho_sach");
+  const [page, setPage] = useState(1);
+  const [data, setData] = useState(null);
+  const [counts, setCounts] = useState({});
 
   useEffect(() => {
-    getReservationsApi().then((res) => setReservations(res.data));
+    Promise.all(TABS.map((t) => getReservationsApi({ status: t.value }).then((res) => [t.value, res.data.total]))).then((pairs) =>
+      setCounts(Object.fromEntries(pairs))
+    );
   }, []);
+
+  const load = useCallback(() => {
+    setData(null);
+    getReservationsApi({ status, page }).then((res) => setData(res.data));
+  }, [status, page]);
+
+  useEffect(load, [load]);
 
   return (
     <div>
-      <h1 className="mb-4 text-xl font-bold text-gray-900">Hàng chờ đặt trước sách</h1>
-      <p className="mb-4 text-sm text-gray-500">
-        Danh sách độc giả đang đặt trước các đầu sách hiện đã hết. Khi sách được trả về, hệ thống tự động chuyển lượt
-        đặt trước sớm nhất sang trạng thái "Sẵn sàng".
-      </p>
+      <PageHeader
+        icon={Hourglass}
+        title="Hàng chờ đặt trước"
+        subtitle='Độc giả xếp hàng chờ các đầu sách đã hết. Khi sách được trả, lượt đặt sớm nhất tự động chuyển sang "Sẵn sàng".'
+      />
 
-      <div className="overflow-x-auto card">
-        <table className="min-w-full divide-y divide-gray-200 text-sm">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-4 py-3 text-left font-medium text-gray-500">Độc giả</th>
-              <th className="px-4 py-3 text-left font-medium text-gray-500">Sách</th>
-              <th className="px-4 py-3 text-left font-medium text-gray-500">Thời gian đặt</th>
-              <th className="px-4 py-3 text-left font-medium text-gray-500">Trạng thái</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {reservations?.data.map((r) => {
-              const info = STATUS_LABEL[r.status] || { label: r.status, className: "bg-gray-100" };
-              return (
-                <tr key={r.id}>
-                  <td className="px-4 py-3">
-                    <p className="font-medium text-gray-900">{r.user?.name}</p>
-                    <p className="text-xs text-gray-500">{r.user?.email}</p>
-                  </td>
-                  <td className="px-4 py-3">{r.book?.title}</td>
-                  <td className="px-4 py-3">{r.created_at?.slice(0, 16).replace("T", " ")}</td>
-                  <td className="px-4 py-3">
-                    <span className={`badge ${info.className}`}>{info.label}</span>
-                  </td>
-                </tr>
-              );
-            })}
-            {reservations && reservations.data.length === 0 && (
-              <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-gray-500">
-                  Chưa có ai đặt trước sách.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <Tabs
+        tabs={TABS.map((t) => ({ ...t, count: counts[t.value] }))}
+        value={status}
+        onChange={(v) => {
+          setStatus(v);
+          setPage(1);
+        }}
+      />
+
+      <DataTable
+        loading={!data}
+        colSpan={5}
+        empty="Không có lượt đặt trước nào."
+        head={
+          <>
+            <th>#</th>
+            <th>Độc giả</th>
+            <th>Sách</th>
+            <th>Thời gian đặt</th>
+            <th>Trạng thái</th>
+          </>
+        }
+        footer={<Pagination meta={data} onChange={setPage} />}
+      >
+        {(data?.data || []).map((r, i) => (
+          <tr key={r.id}>
+            <td className="w-12 font-bold text-gray-400">{(data.from || 1) + i}</td>
+            <td>
+              <UserCell user={r.user} />
+            </td>
+            <td className="min-w-[240px]">
+              <BookCell book={r.book} sub={`Còn ${r.book?.available_quantity ?? 0} / ${r.book?.quantity ?? 0} bản`} />
+            </td>
+            <td className="whitespace-nowrap">{fmtDateTime(r.created_at)}</td>
+            <td>
+              <Pill tone={STATUS[r.status]?.tone}>{STATUS[r.status]?.label || r.status}</Pill>
+            </td>
+          </tr>
+        ))}
+      </DataTable>
     </div>
   );
 }

@@ -38,8 +38,8 @@ class BookController extends Controller
             $query->where('status', $request->string('status'));
         }
 
-        $sort = $request->string('sort', 'created_at');
-        $direction = $request->string('direction', 'desc');
+        $sort = $request->string('sort', 'created_at')->toString();
+        $direction = $request->string('direction', 'desc')->toString();
         if (in_array($sort, ['title', 'created_at', 'avg_rating', 'borrow_fee'], true)) {
             $query->orderBy($sort, $direction === 'asc' ? 'asc' : 'desc');
         }
@@ -54,24 +54,24 @@ class BookController extends Controller
      */
     public function featured()
     {
-        $newest = Book::with(['category', 'authors'])->orderByDesc('created_at')->limit(8)->get();
+        $newest = Book::with(['category', 'authors'])->orderByDesc('created_at')->limit(10)->get();
 
         $mostBorrowed = Book::withCount('borrowRecords')
             ->with(['category', 'authors'])
             ->orderByDesc('borrow_records_count')
-            ->limit(8)
+            ->limit(10)
             ->get();
 
         $topRated = Book::with(['category', 'authors'])
             ->orderByDesc('avg_rating')
-            ->limit(8)
+            ->limit(10)
             ->get();
 
         // UC32 - sách do Admin chủ động ghim làm nổi bật trên trang chủ
         $adminFeatured = Book::with(['category', 'authors'])
             ->where('is_featured', true)
             ->orderByDesc('updated_at')
-            ->limit(8)
+            ->limit(10)
             ->get();
 
         return response()->json([

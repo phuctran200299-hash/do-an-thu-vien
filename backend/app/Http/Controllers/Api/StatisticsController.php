@@ -24,7 +24,7 @@ class StatisticsController extends Controller
 
         $mostBorrowedBooks = BorrowRecord::select('book_id', DB::raw('COUNT(*) as total_borrows'))
             ->whereBetween('borrow_records.created_at', [$from, $to])
-            ->with('book:id,title,borrow_fee')
+            ->with('book:id,title,borrow_fee,cover_image')
             ->groupBy('book_id')
             ->orderByDesc('total_borrows')
             ->limit(5)

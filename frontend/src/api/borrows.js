@@ -11,3 +11,4 @@ export const getOverdueBorrowsApi = (params) => apiClient.get("/borrow-requests/
 export const approveBorrowApi = (id) => apiClient.put(`/borrow-requests/${id}/approve`);
 export const rejectBorrowApi = (id) => apiClient.put(`/borrow-requests/${id}/reject`);
 export const returnBorrowApi = (id) => apiClient.put(`/borrow-requests/${id}/return`);
+export const getBorrowSummaryApi = () => apiClient.get("/borrow-requests/summary");
